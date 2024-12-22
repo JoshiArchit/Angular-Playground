@@ -64,55 +64,37 @@ export class GaugeChartComponent {
     if (this.chart) {
       this.chart.destroy(); // Prevent multiple instances
     }
-  
+    
     const totalValue = 100; // Max gauge value
     const currentValue = 60; // Current gauge reading
     let currentAngle = Math.PI * 1.5;
-    // Consider that the chart is already rotated by 270 degrees
     const targetAngle = Math.PI * 1.5 + ((currentValue / totalValue) * Math.PI);
 
     const needlePlugin = {
       id: 'needle',
-      afterDraw(chart: any) {
-        const {ctx, data} = chart;
+      afterDraw: (chart: any) => {
+        const { ctx } = chart;
         ctx.save();
-        // log chart meta data
-        console.log(chart);
-        // Get center of the gauge chart
+    
         const x_center = chart.getDatasetMeta(0).data[0].x;
         const y_center = chart.getDatasetMeta(0).data[0].y;
         const innerRadius = chart.getDatasetMeta(0).data[0].innerRadius;
-
-        ctx.translate(x_center, y_center); // Translate to center
-
-        // Rotate needle to target angle
+        const outerRadius = chart.getDatasetMeta(0).data[0].outerRadius;
+    
+        ctx.translate(x_center, y_center);
+    
         if (currentAngle < targetAngle) {
           currentAngle += 0.1;
         }
-
-        // Needle
-        ctx.beginPath();
-        ctx.strokeStyle = 'black';
-        ctx.fillStyle = 'black';
-        // Needle needs to start at 0
-        // Needle ends at circumference
-        ctx.rotate(currentAngle);
-        ctx.moveTo(0 - 5, 0);
-        ctx.lineTo(0, -innerRadius);
-        ctx.lineTo(0 + 5, 0);
-        ctx.stroke();
-        ctx.fill();
-
-        // Circle at the bottom of needle
-        ctx.beginPath();
-        ctx.arc(0, 0, 5, 0, 2 * Math.PI);
-        ctx.fillStyle = 'black';
-        ctx.fill();
-
+    
+        this.drawNeedle(ctx, x_center, y_center, innerRadius, currentAngle);
         ctx.restore();
-
-      }
+    
+        // Call drawLabels with the correct context
+        this.drawLabels(ctx, x_center, y_center, outerRadius);
+      },
     };
+    
   
     this.chart = new Chart('MyChart', {
       type: 'doughnut',
@@ -136,9 +118,63 @@ export class GaugeChartComponent {
             display: false,  // No legend for cleaner UI
           },
         },
+        layout: {
+          padding: {
+            top: 20,    // Extra space above the chart
+            bottom: 20, // Extra space below the chart
+            left: 30,   // Extra space on the left
+            right: 30,  // Extra space on the right
+          },
+        }
       },
       plugins: [needlePlugin], // Attach the custom needle plugin
     });
   }
-  
+
+  drawLabels(ctx: any, xCenter: number, yCenter: number, radius: number) {
+    ctx.save();
+
+    ctx.font = '5px Arial';
+    ctx.fillStyle = 'black';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+
+    // Draw labels at chart edges
+    const offset = 15; // Offset for labels
+    ctx.fillText('0', xCenter + (radius + offset) * Math.cos(Math.PI), yCenter + (radius + offset) * Math.sin(Math.PI));
+    ctx.fillText(
+      '100',
+      xCenter + (radius + offset) * Math.cos(0),
+      yCenter + (radius + offset) * Math.sin(0)
+    );
+    ctx.fillText(
+      '50',
+      xCenter + (radius + offset) * Math.cos(Math.PI * 1.5),
+      yCenter + (radius + offset) * Math.sin(Math.PI * 1.5)
+    );
+
+    ctx.restore();
+  }
+
+  drawNeedle(ctx: any, xCenter: number, yCenter: number, innerRadius: number, currentAngle: number) {
+    ctx.save();
+    // Draw Needle
+    ctx.beginPath();
+    ctx.strokeStyle = 'black';
+    ctx.fillStyle = 'black';
+    ctx.rotate(currentAngle);
+    ctx.moveTo(0 - 5, 0);
+    ctx.lineTo(0, -innerRadius);
+    ctx.lineTo(0 + 5, 0);
+    ctx.stroke();
+    ctx.fill();
+
+    // Draw Circle
+    ctx.beginPath();
+    ctx.arc(0, 0, 5, 0, 2 * Math.PI);
+    ctx.fillStyle = 'black';
+    ctx.fill();
+
+    ctx.restore();
+  }
 }
